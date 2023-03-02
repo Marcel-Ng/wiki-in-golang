@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -9,18 +10,22 @@ import (
 	"regexp"
 )
 
+// Setting the struct [data type] for loading the page
 type Page struct {
 	Title string
 	Body  []byte
 }
 
+// Creating a method to save the page on the Page we created above
 func (p *Page) save() error {
-	filename := p.Title + ".txt"
+	filename := "./data/" + p.Title + ".txt"
 	return os.WriteFile(filename, p.Body, 0600)
 }
 
-var templates = template.Must(template.ParseFiles("view.html", "edit.html"))
+// Parsing the template file
+var templates = template.Must(template.ParseFiles("./templates/view.html", "./templates/edit.html"))
 
+// setting up the regular expression that would make sure that the url confirms to what we want
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
@@ -42,6 +47,11 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 		}
 		fn(w, r, m[2])
 	}
+}
+
+func webrootHandler(w http.ResponseWriter, r *http.Request) {
+	listAllTheFilesInDataDir()
+	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
@@ -90,12 +100,23 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+	filename := "./data/" + title + ".txt"
 	body, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 	return &Page{Title: title, Body: body}, nil
+}
+
+func listAllTheFilesInDataDir() {
+	entries, err := os.ReadDir("./data")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range entries {
+		fmt.Println(e.Name())
+	}
 }
 
 func main() {
@@ -107,6 +128,8 @@ func main() {
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.HandleFunc("/", webrootHandler)
 
+	fmt.Println("Server started on port :9000")
 	log.Fatal(http.ListenAndServe(":9000", nil))
 }

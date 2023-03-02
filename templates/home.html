@@ -1,0 +1,11 @@
+<h1>Front page</h1>
+
+<p>This is the landing page of this application.</p>
+
+<p>We are going to find a way to make it work by indexing all the available wikies</p>
+
+<p>
+    {{ for _, e := range entries { }}
+            fmt.Println(e.Name())
+    {{ } }}
+</p>
